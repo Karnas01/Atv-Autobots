@@ -1,7 +1,8 @@
 package com.autobots.automanager.controles;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,130 +16,211 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.autobots.automanager.entidades.Cliente;
-import com.autobots.automanager.entidades.Endereco;
-import com.autobots.automanager.modelos.AdicionadorLinkEndereco;
-import com.autobots.automanager.modelos.EnderecoAtualizador;
-import com.autobots.automanager.modelos.EnderecoSelecionador;
-import com.autobots.automanager.repositorios.ClienteRepositorio;
-import com.autobots.automanager.repositorios.EnderecoRepositorio;
+import com.autobots.automanager.adicionador.AdicionadorLinkEndereco;
+import com.autobots.automanager.atualizador.AtualizadorEndereco;
+import com.autobots.automanager.entitades.Empresa;
+import com.autobots.automanager.entitades.Endereco;
+import com.autobots.automanager.entitades.Usuario;
+import com.autobots.automanager.repositorios.RepositorioEmpresa;
+import com.autobots.automanager.repositorios.RepositorioUsuario;
 
 @RestController
 @RequestMapping("/endereco")
 public class EnderecoControle {
-	
-	@Autowired
-	private ClienteRepositorio clienteRepositorio;
-	
-	@Autowired
-	private EnderecoRepositorio enderecoRepositorio;
-	
-	@Autowired
-	private EnderecoSelecionador selecionador;
-	
-	@Autowired
-	private AdicionadorLinkEndereco adicionador;
-	
-	@GetMapping("/enderecos")
-	public ResponseEntity<List<Endereco>> obterEnderecos() {
-		List<Endereco> enderecos = enderecoRepositorio.findAll();
-		adicionador.adicionarLink(enderecos);
-		return new ResponseEntity<>(enderecos, HttpStatus.OK);
-	}
-	
-	@GetMapping("/endereco/{id}")
-	public ResponseEntity<Endereco> obterEndereco(@PathVariable long id) {
-		List<Endereco> enderecos = enderecoRepositorio.findAll();
-		Endereco endereco = selecionador.selecionar(enderecos, id);
-		if (endereco != null) {
-			adicionador.adicionarLink(endereco);
-			return new ResponseEntity<>(endereco, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		}
-	}
-	
-	@GetMapping("/listarEnderecoCliente/{clienteId}")
-	public ResponseEntity<Endereco> listarEnderecosCliente(@PathVariable long clienteId) {
-	    Optional<Cliente> clienteOpt = clienteRepositorio.findById(clienteId);
-	    if (clienteOpt.isPresent()) {
-	        Endereco endereco = clienteOpt.get().getEndereco();
-	        return new ResponseEntity<>(endereco, HttpStatus.OK);
-	    } else {
-	        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	    }
-	}
-	
-	@PutMapping("/atualizar")
-	public ResponseEntity<Void> atualizarEndereco(@RequestBody Endereco atualizacao) {
-		Optional<Endereco> enderecoOpt = enderecoRepositorio.findById(atualizacao.getId());
-		if (enderecoOpt.isPresent()) {
-			Endereco endereco = enderecoOpt.get();
-			EnderecoAtualizador atualizador = new EnderecoAtualizador();
-			atualizador.atualizar(endereco, atualizacao);
-			enderecoRepositorio.save(endereco);
-			return new ResponseEntity<>(HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		}
-	}
 
-	@PostMapping("/cadastrarEnderecoCliente/{clienteId}")
-	public ResponseEntity<Void> cadastrarEnderecoCliente(@PathVariable long clienteId, @RequestBody Endereco cadastrarEndereco) {
-	    Optional<Cliente> clienteOpt = clienteRepositorio.findById(clienteId);
-	    if (clienteOpt.isPresent()) {
-	        Cliente cliente = clienteOpt.get();
-	        if (cliente.getEndereco() == null) {
-	            cliente.setEndereco(cadastrarEndereco);
-	            clienteRepositorio.save(cliente);
-	            return new ResponseEntity<>(HttpStatus.CREATED);
-	        } else {
-	            return new ResponseEntity<>(HttpStatus.CONFLICT);
-	        }
-	    } else {
-	        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	    }
-	}
+    @Autowired
+    private RepositorioUsuario repositorio;
+    
+    @Autowired
+    private RepositorioEmpresa repositorioEmpresa;
+    
 
 
-	@PutMapping("/atualizarEnderecoCliente/{clienteId}/{enderecoId}")
-	public ResponseEntity<Void> atualizarEnderecoCliente(@PathVariable long clienteId, @PathVariable long enderecoId, @RequestBody Endereco atualizacaoEndereco) {
-	    Optional<Cliente> clienteOpt = clienteRepositorio.findById(clienteId);
-	    if (clienteOpt.isPresent()) {
-	        Cliente cliente = clienteOpt.get();
-	        Endereco endereco = cliente.getEndereco();
-	        if (endereco != null && endereco.getId().equals(enderecoId)) {
-	            EnderecoAtualizador atualizador = new EnderecoAtualizador();
-	            atualizador.atualizar(endereco, atualizacaoEndereco);
-	            enderecoRepositorio.save(endereco);
-	            clienteRepositorio.save(cliente);
-	            return new ResponseEntity<>(HttpStatus.OK);
-	        } else {
-	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	        }
-	    } else {
-	        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	    }
-	}
+    @PostMapping("/cadastrarEnderecoCliente/{clienteId}")
+    public ResponseEntity<?> cadastrarEndereco(@PathVariable long clienteId, @RequestBody Endereco novoEndereco) {
+        Usuario cliente = repositorio.findById(clienteId).orElse(null);
+        if (cliente != null) {
+            if (cliente.getEndereco() != null) {
+                return new ResponseEntity<>("Já existe um endereço cadastrado para este cliente",HttpStatus.CONFLICT);
+            }
+            cliente.setEndereco(novoEndereco);
+            repositorio.save(cliente);
+            return new ResponseEntity<>("Endereço cadastrado com sucesso.", HttpStatus.CREATED);
+        } else {
+            return new ResponseEntity<>("Cliente não encontrado.", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/listarEnderecoCliente/{clienteId}")
+    public ResponseEntity<?> listarEnderecoCliente(@PathVariable long clienteId) {
+        Usuario cliente = repositorio.findById(clienteId).orElse(null);
+        if (cliente != null) {
+            if (cliente.getEndereco() == null) {
+                return new ResponseEntity<>("Endereço não encontrado.", HttpStatus.NOT_FOUND);
+            }
+            new AdicionadorLinkEndereco().adicionarLink(cliente.getEndereco());
+            return new ResponseEntity<>(cliente.getEndereco(), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Cliente não encontrado.", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/atualizarEnderecoCliente/{clienteId}")
+    public ResponseEntity<?> atualizarEndereco(@PathVariable long clienteId, @RequestBody Endereco atualizarEndereco) {
+        Usuario cliente = repositorio.findById(clienteId).orElse(null);
+        if (cliente != null) {
+            Endereco enderecoExistente = cliente.getEndereco();
+            if (enderecoExistente != null) {
+                AtualizadorEndereco atualizador = new AtualizadorEndereco();
+                atualizador.atualizar(enderecoExistente, atualizarEndereco);
+            } else {
+                cliente.setEndereco(atualizarEndereco);
+            }
+            repositorio.save(cliente);
+            return new ResponseEntity<>("Endereço atualizado com sucesso.", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Cliente não encontrado.", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @DeleteMapping("/deletarEnderecoCliente/{clienteId}")
+    public ResponseEntity<?> deletarEnderecoCliente(@PathVariable long clienteId) {
+        Usuario cliente = repositorio.findById(clienteId).orElse(null);
+        if (cliente != null) {
+            if (cliente.getEndereco() != null) {
+                cliente.setEndereco(null);
+                repositorio.save(cliente);
+                return new ResponseEntity<>("Endereço deletado com sucesso.", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Endereço não encontrado.", HttpStatus.NOT_FOUND);
+            }
+        } else {
+            return new ResponseEntity<>("Cliente não encontrado.", HttpStatus.NOT_FOUND);
+        }
+    }
+    
+    
+
+    @PostMapping("/cadastrarEnderecoEmpresa/{empresaId}")
+    public ResponseEntity<?> cadastrarEnderecoEmpresa(@PathVariable long empresaId, @RequestBody Endereco novoEndereco) {
+        Empresa empresa = repositorioEmpresa.findById(empresaId).orElse(null);
+        if (empresa != null) {
+            if (empresa.getEndereco() != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Já existe um endereço cadastrado para esta empresa.");
+            }
+            empresa.setEndereco(novoEndereco);
+            repositorioEmpresa.save(empresa);
+            return new ResponseEntity<>("Endereço cadastrado com sucesso para a empresa.", HttpStatus.CREATED);
+        } else {
+            return new ResponseEntity<>("Empresa não encontrada.", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/listarEnderecoEmpresa/{empresaId}")
+    public ResponseEntity<?> listarEnderecoEmpresa(@PathVariable long empresaId) {
+        Empresa empresa = repositorioEmpresa.findById(empresaId).orElse(null);
+        if (empresa != null) {
+            if (empresa.getEndereco() == null) {
+                return new ResponseEntity<>("Endereço não encontrado para esta empresa.", HttpStatus.NOT_FOUND);
+            }
+            new AdicionadorLinkEndereco().adicionarLink(empresa.getEndereco());
+            return new ResponseEntity<>(empresa.getEndereco(), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Empresa não encontrada.", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/atualizarEnderecoEmpresa/{empresaId}")
+    public ResponseEntity<?> atualizarEnderecoEmpresa(@PathVariable long empresaId, @RequestBody Endereco atualizarEndereco) {
+        Empresa empresa = repositorioEmpresa.findById(empresaId).orElse(null);
+        if (empresa != null) {
+            Endereco enderecoExistente = empresa.getEndereco();
+            if (enderecoExistente != null) {
+                AtualizadorEndereco atualizador = new AtualizadorEndereco();
+                atualizador.atualizar(enderecoExistente, atualizarEndereco);
+            } else {
+                empresa.setEndereco(atualizarEndereco);
+            }
+            repositorioEmpresa.save(empresa);
+            return new ResponseEntity<>("Endereço atualizado com sucesso para a empresa.", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Empresa não encontrada.", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @DeleteMapping("/deletarEnderecoEmpresa/{empresaId}")
+    public ResponseEntity<?> deletarEnderecoEmpresa(@PathVariable long empresaId) {
+        Empresa empresa = repositorioEmpresa.findById(empresaId).orElse(null);
+        if (empresa != null) {
+            if (empresa.getEndereco() != null) {
+                empresa.setEndereco(null);
+                repositorioEmpresa.save(empresa);
+                return new ResponseEntity<>("Endereço deletado com sucesso da empresa.", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Endereço não encontrado para esta empresa.", HttpStatus.NOT_FOUND);
+            }
+        } else {
+            return new ResponseEntity<>("Empresa não encontrada.", HttpStatus.NOT_FOUND);
+        }
+    }
 
 
-	@DeleteMapping("/deletarEnderecoCliente/{clienteId}/{enderecoId}")
-	public ResponseEntity<Void> deletarEnderecoCliente(@PathVariable long clienteId, @PathVariable long enderecoId) {
-	    Optional<Cliente> clienteOpt = clienteRepositorio.findById(clienteId);
-	    if (clienteOpt.isPresent()) {
-	        Cliente cliente = clienteOpt.get();
-	        Endereco endereco = cliente.getEndereco();
-	        if (endereco != null && endereco.getId().equals(enderecoId)) {
-	            cliente.setEndereco(null);
-	            enderecoRepositorio.deleteById(enderecoId);
-	            clienteRepositorio.save(cliente);
-	            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-	        } else {
-	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	        }
-	    } else {
-	        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	    }
-	}
+    
+    @GetMapping("/obterEnderecoEmpresa/{empresaId}")
+    public ResponseEntity<?> obterEnderecoEmpresa(@PathVariable long empresaId) {
+        Empresa empresa = repositorioEmpresa.findById(empresaId).orElse(null);
+        if (empresa != null) {
+            Endereco endereco = empresa.getEndereco();
+            if (endereco != null) {
+                new AdicionadorLinkEndereco().adicionarLink(endereco);
+                return new ResponseEntity<>(endereco, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Endereço não encontrado para esta empresa.", HttpStatus.NOT_FOUND);
+            }
+        } else {
+            return new ResponseEntity<>("Empresa não encontrada.", HttpStatus.NOT_FOUND);
+        }
+    }
 
+    @GetMapping("/obterEnderecosEmpresa")
+    public ResponseEntity<List<Endereco>> obterEnderecosEmpresa() {
+        List<Endereco> enderecos = repositorioEmpresa.findAll().stream()
+                .map(Empresa::getEndereco)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (!enderecos.isEmpty()) {
+            new AdicionadorLinkEndereco().adicionarLink(enderecos);
+            return new ResponseEntity<>(enderecos, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+    
+    @GetMapping("/obterEnderecoUsuario/{enderecoId}")
+    public ResponseEntity<?> obterEndereco(@PathVariable long enderecoId) {
+        Usuario usuario = repositorio.findAll().stream()
+                .filter(u -> u.getEndereco() != null && u.getEndereco().getId() == enderecoId)
+                .findFirst()
+                .orElse(null);
+        if (usuario != null) {
+            Endereco endereco = usuario.getEndereco();
+            new AdicionadorLinkEndereco().adicionarLink(endereco);
+            return new ResponseEntity<>(endereco, HttpStatus.OK);
+        }
+        return new ResponseEntity<>("Endereço não encontrado.", HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping("/obterEnderecosUsuario")
+    public ResponseEntity<List<Endereco>> obterEnderecos() {
+        List<Endereco> enderecos = repositorio.findAll().stream()
+                .map(Usuario::getEndereco)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (!enderecos.isEmpty()) {
+            new AdicionadorLinkEndereco().adicionarLink(enderecos);
+            return new ResponseEntity<>(enderecos, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 }
