@@ -6,20 +6,22 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+import org.springframework.hateoas.RepresentationModel;
+
 import lombok.Data;
 
 @Data
 @Entity
-public class Documento {
+public class Documento extends RepresentationModel<Documento> {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+	
 	@Column
 	private String tipo;
+	
 	@Column(unique = true)
 	private String numero;
-	@Column
-	private String titular;
 	
 	public Long getId() {
 		return id;
@@ -39,12 +41,5 @@ public class Documento {
 	public void setNumero(String numero) {
 		this.numero = numero;
 	}
-	public String getTitular() {
-		return titular;
-	}
-	public void setTitular(String titular) {
-		this.titular = titular;
-	}
-	
 	
 }

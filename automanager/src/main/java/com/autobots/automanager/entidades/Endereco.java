@@ -6,30 +6,38 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+import org.springframework.hateoas.RepresentationModel;
+
 import lombok.Data;
 
 @Data
 @Entity
-public class Endereco {
-	@Id
+public class Endereco extends RepresentationModel<Endereco>  {
+	@Id()
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+	
 	@Column(nullable = true)
-	private String estado;
-	@Column(nullable = false)
-	private String cidade;
-	@Column(nullable = true)
-	private String bairro;
-	@Column(nullable = false)
-	private String rua;
-	@Column(nullable = false)
-	private String numero;
-	@Column(nullable = true)
-	private String codigoPostal;
-	@Column(unique = false, nullable = true)
-	private String informacoesAdicionais;
-	@Column
-	private String titular;
+    private String estado;
+    
+    @Column(nullable = true)
+    private String cidade;
+    
+    @Column(nullable = true)
+    private String bairro;
+    
+    @Column(nullable = true)
+    private String rua;
+    
+    @Column(nullable = true)
+    private String numero;
+    
+    @Column(nullable = true)
+    private String codigoPostal;
+    
+    @Column(unique = false, nullable = true)
+    private String informacoesAdicionais;
+	
 	public Long getId() {
 		return id;
 	}
@@ -78,13 +86,5 @@ public class Endereco {
 	public void setInformacoesAdicionais(String informacoesAdicionais) {
 		this.informacoesAdicionais = informacoesAdicionais;
 	}
-	public String getTitular() {
-		return titular;
-	}
-	public void setTitular(String titular) {
-		this.titular = titular;
-	}
 	
-	
-
 }

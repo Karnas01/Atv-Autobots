@@ -41,7 +41,6 @@ public class AutomanagerApplication {
 			Telefone telefone = new Telefone();
 			telefone.setDdd("21");
 			telefone.setNumero("981234576");
-			telefone.setTitular(cliente.getNome());
 			cliente.getTelefones().add(telefone);
 			
 			Endereco endereco = new Endereco();
@@ -52,25 +51,55 @@ public class AutomanagerApplication {
 			endereco.setNumero("1702");
 			endereco.setCodigoPostal("22021001");
 			endereco.setInformacoesAdicionais("Hotel Copacabana palace");
-			endereco.setTitular(cliente.getNome());
 			cliente.setEndereco(endereco);
 			
 			Documento rg = new Documento();
 			rg.setTipo("RG");
 			rg.setNumero("1500");
-			rg.setTitular(cliente.getNome());
 			
 			Documento cpf = new Documento();
 			cpf.setTipo("RG");
 			cpf.setNumero("00000000001");
-			cpf.setTitular(cliente.getNome());
 			
 			cliente.getDocumentos().add(rg);
 			cliente.getDocumentos().add(cpf);
-		
 			
 			repositorio.save(cliente);
+
+			Cliente cliente2 = new Cliente();
+			cliente2.setNome("Miguel Conde Santos");
+			cliente2.setDataCadastro(Calendar.getInstance().getTime());
+			cliente2.setDataNascimento(calendario.getTime());
+			cliente2.setNomeSocial("Miguel Social");
+
+			Telefone telefone2 = new Telefone();
+			telefone2.setDdd("12");
+			telefone2.setNumero("982573856");
+			cliente2.getTelefones().add(telefone2);
+
+			Endereco endereco2 = new Endereco();
+			endereco2.setEstado("São Paulo");
+			endereco2.setCidade("São José dos Campos");
+			endereco2.setBairro("Sei lá");
+			endereco2.setRua("Logo Ali");
+			endereco2.setNumero("123");
+			endereco2.setCodigoPostal("11111111");
+			endereco2.setInformacoesAdicionais("Casinha do Miguel");
+			cliente2.setEndereco(endereco2);
+
+			Documento rg2 = new Documento();
+			rg2.setTipo("RG");
+			rg2.setNumero("9999");
+
+			Documento cpf2 = new Documento();
+			cpf2.setTipo("CPF");
+			cpf2.setNumero("00000000000");
+
+			cliente2.getDocumentos().add(rg2);
+			cliente2.getDocumentos().add(cpf2);
+
+			repositorio.save(cliente2);
+			
 		}
 	}
-
 }
