@@ -7,25 +7,19 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode
 @Data
 @Entity
-public class Endereco {
+public class Servico {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	@Column(nullable = false)
-	private String estado;
+	private String nome;
 	@Column(nullable = false)
-	private String cidade;
-	@Column(nullable = false)
-	private String bairro;
-	@Column(nullable = false)
-	private String rua;
-	@Column(nullable = false)
-	private String numero;
-	@Column(nullable = false)
-	private String codigoPostal;
-	@Column()
-	private String informacoesAdicionais;
+	private double valor;
+	@Column
+	private String descricao;
 }

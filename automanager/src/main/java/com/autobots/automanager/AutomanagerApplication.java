@@ -1,38 +1,47 @@
 package com.autobots.automanager;
-
 import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import com.autobots.automanager.entitades.CredencialUsuarioSenha;
-import com.autobots.automanager.entitades.Documento;
-import com.autobots.automanager.entitades.Email;
-import com.autobots.automanager.entitades.Empresa;
-import com.autobots.automanager.entitades.Endereco;
-import com.autobots.automanager.entitades.Mercadoria;
-import com.autobots.automanager.entitades.Servico;
-import com.autobots.automanager.entitades.Telefone;
-import com.autobots.automanager.entitades.Usuario;
-import com.autobots.automanager.entitades.Veiculo;
-import com.autobots.automanager.entitades.Venda;
+import com.autobots.automanager.entidades.CredencialUsuarioSenha;
+import com.autobots.automanager.entidades.Documento;
+import com.autobots.automanager.entidades.Email;
+import com.autobots.automanager.entidades.Empresa;
+import com.autobots.automanager.entidades.Endereco;
+import com.autobots.automanager.entidades.Mercadoria;
+import com.autobots.automanager.entidades.Servico;
+import com.autobots.automanager.entidades.Telefone;
+import com.autobots.automanager.entidades.Usuario;
+import com.autobots.automanager.entidades.Veiculo;
+import com.autobots.automanager.entidades.Venda;
+import com.autobots.automanager.enumeracoes.Perfil;
 import com.autobots.automanager.enumeracoes.PerfilUsuario;
 import com.autobots.automanager.enumeracoes.TipoDocumento;
 import com.autobots.automanager.enumeracoes.TipoVeiculo;
 import com.autobots.automanager.repositorios.RepositorioEmpresa;
+import com.autobots.automanager.repositorios.RepositorioUsuario;
+
+
+
 
 @SpringBootApplication
 public class AutomanagerApplication implements CommandLineRunner {
-
+	
 	@Autowired
 	private RepositorioEmpresa repositorioEmpresa;
-
+	@Autowired
+	private RepositorioUsuario userRepo;
+	
 	public static void main(String[] args) {
 		SpringApplication.run(AutomanagerApplication.class, args);
 	}
-
+	
+	
+	
 	@Override
 	public void run(String... args) throws Exception {
 
@@ -260,15 +269,42 @@ public class AutomanagerApplication implements CommandLineRunner {
 		
 		repositorioEmpresa.save(empresa);
 		
-        long startTime = System.currentTimeMillis();
+		
+		// Jwt perfis
+		
+		BCryptPasswordEncoder codificador = new BCryptPasswordEncoder();
+		Usuario usuario = new Usuario();
+		usuario.setNome("administrador");
+		usuario.getNivelDeAcesso().add(Perfil.ROLE_ADMIN);
+		CredencialUsuarioSenha credencial = new CredencialUsuarioSenha();
+		credencial.setNomeUsuario("admin");
+		String senha  = "123456";
+		credencial.setSenha(codificador.encode(senha));
+		usuario.getCredenciais().add(credencial);
+		userRepo.save(usuario);
+		
+		BCryptPasswordEncoder codificadorVendedor= new BCryptPasswordEncoder();
+		Usuario vendedor = new Usuario();
+		vendedor.setNome("João");
+		vendedor.getNivelDeAcesso().add(Perfil.ROLE_VENDEDOR);
+		CredencialUsuarioSenha credencialVendedor = new CredencialUsuarioSenha();
+		credencialVendedor.setNomeUsuario("João");
+		String senhaVendedor = "coxinha";
+		credencialVendedor.setSenha(codificadorVendedor.encode(senhaVendedor));
+		vendedor.getCredenciais().add(credencialVendedor);
+		userRepo.save(vendedor);
+		
+		BCryptPasswordEncoder codificadorCliente= new BCryptPasswordEncoder();
+		Usuario maria = new Usuario();
+		maria.setNome("Maria");
+		maria.getNivelDeAcesso().add(Perfil.ROLE_CLIENTE);
+		CredencialUsuarioSenha credencialClienteMaria = new CredencialUsuarioSenha();
+		credencialClienteMaria.setNomeUsuario("Maria");
+		String senhaMaria = "cavaloslegais";
+		credencialClienteMaria.setSenha(codificadorCliente.encode(senhaMaria));
+		maria.getCredenciais().add(credencialClienteMaria);
+		userRepo.save(maria);
 
-        long duration = 24 * 60 * 60 * 1000;
-
-        while (System.currentTimeMillis() - startTime < duration) {
-            Thread.sleep(60000); 
-        }
-
-        System.exit(0);
-    }
+	}
 
 }

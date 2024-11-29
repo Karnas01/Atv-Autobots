@@ -1,12 +1,11 @@
 package com.autobots.automanager.controles;
 
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,132 +15,96 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.autobots.automanager.adicionador.AdicionadorLinkMercadoria;
-import com.autobots.automanager.atualizador.AtualizadorMercadoria;
-import com.autobots.automanager.entitades.Empresa;
-import com.autobots.automanager.entitades.Mercadoria;
-import com.autobots.automanager.entitades.Usuario;
-import com.autobots.automanager.repositorios.RepositorioEmpresa;
-import com.autobots.automanager.repositorios.RepositorioMercadoria;
-import com.autobots.automanager.repositorios.RepositorioUsuario;
-import com.autobots.automanager.selecionador.SelecionadorMercadoria;
+import com.autobots.automanager.entidades.Empresa;
+import com.autobots.automanager.entidades.Mercadoria;
+import com.autobots.automanager.entidades.Usuario;
+import com.autobots.automanager.servicos.ServicoAtualizador;
+import com.autobots.automanager.servicos.ServicoCadastro;
+import com.autobots.automanager.servicos.ServicoListagem;
+import com.autobots.automanager.servicos.ServicoRemovedor;
 
 @RestController
 @RequestMapping("/mercadoria")
 public class MercadoriaControle {
 	
 	@Autowired
-	private RepositorioMercadoria repositorio;
-	
+	private ServicoCadastro cadastro;
 	@Autowired
-	private RepositorioUsuario repositorioUsuario;
-	
+	private ServicoListagem listagem;
 	@Autowired
-	private RepositorioEmpresa repositorioEmpresa;
-	
+	private ServicoRemovedor removedor;
 	@Autowired
-	private AtualizadorMercadoria atualizadorMercadoria;
+	private ServicoAtualizador atualizador;
 	
-	@Autowired
-    private SelecionadorMercadoria selecionador;
-
-	
-	@GetMapping("/listarMercadorias")
-	public ResponseEntity<?> obterMercadorias() {
-		List<Mercadoria> mercadorias = repositorio.findAll();
-		if (!mercadorias.isEmpty()) {
-			new AdicionadorLinkMercadoria().adicionarLink(mercadorias);
-			return new ResponseEntity<>(mercadorias, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>("Nenhuma mercadoria encontrada.", HttpStatus.NOT_FOUND);
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_GERENTE')")
+	@PostMapping("/cadastrar/{id}")
+	public ResponseEntity<?> cadastrar(@RequestBody Mercadoria mercadoria, @PathVariable Long id){
+		Usuario usuario = listagem.buscarUsuario(id);
+		Empresa empresa = listagem.buscarEmpresa(usuario.getIdEmpresa());
+		if (usuario != null && empresa != null) {
+			cadastro.cadastrar(mercadoria);
+			
+			empresa.getMercadorias().add(mercadoria);
+			usuario.getMercadorias().add(mercadoria);
+			
+			cadastro.cadastrar(usuario);
+			cadastro.cadastrar(empresa);
+			
+			return new ResponseEntity<>(HttpStatus.CREATED);
+		}
+		else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
 	
-	@GetMapping("/listarMercadoria/{id}")
-    public ResponseEntity<?> obterMercadoria(@PathVariable long id) {
-        List<Mercadoria> todasMercadorias = repositorio.findAll();
-        Mercadoria mercadoria = selecionador.selecionar(todasMercadorias, id);
-        if (mercadoria != null) {
-            new AdicionadorLinkMercadoria().adicionarLink(mercadoria);
-            return new ResponseEntity<>(mercadoria, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("Mercadoria não encontrada.", HttpStatus.NOT_FOUND);
-        }
-    }
-	
-	@PostMapping("/cadastrarMercadoria/{empresaId}")
-	public ResponseEntity<?> cadastrarMercadoria(@PathVariable long empresaId,@RequestBody Mercadoria mercadoria) {
-		mercadoria.setCadastro(new Date());
-		mercadoria.setValidade(new Date());
-		mercadoria.setFabricao(new Date());
-		Empresa empresa = repositorioEmpresa.getById(empresaId);
-		empresa.getMercadorias().add(mercadoria);
-        repositorio.save(mercadoria);
-        repositorioEmpresa.save(empresa);
-		new AdicionadorLinkMercadoria().adicionarLink(mercadoria);
-		return new ResponseEntity<>("Mercadoria cadastrada com sucesso.", HttpStatus.CREATED);
-	}
-	
-	@PutMapping("/atualizarMercadoria/{id}")
-	public ResponseEntity<?> atualizarMercadoria(@PathVariable long id, @RequestBody Mercadoria atualizacao) {
-		Optional<Mercadoria> mercadoriaOpt = repositorio.findById(id);
-		if (mercadoriaOpt.isPresent()) {
-			Mercadoria mercadoria = mercadoriaOpt.get();
-			atualizadorMercadoria.atualizar(mercadoria, atualizacao);
-			repositorio.save(mercadoria);
-			new AdicionadorLinkMercadoria().adicionarLink(mercadoria);
-			return new ResponseEntity<>("Mercadoria atualizada com sucesso.", HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>("Mercadoria não encontrada.", HttpStatus.NOT_FOUND);
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_GERENTE', 'ROLE_VENDEDOR')")
+	@GetMapping("/listar")
+	public ResponseEntity<List<Mercadoria>> listar(){
+		List<Mercadoria> mercadorias = listagem.mercadorias();
+		if(!mercadorias.isEmpty()) {
+			return new ResponseEntity<List<Mercadoria>>(mercadorias ,HttpStatus.FOUND);
+		}
+		else {
+			return new ResponseEntity<List<Mercadoria>>(HttpStatus.NOT_FOUND);
 		}
 	}
 	
-	@DeleteMapping("/deletarMercadoria/{id}")
-	public ResponseEntity<?> deletarMercadoria(@PathVariable long id) {
-		Optional<Mercadoria> mercadoriaOpt = repositorio.findById(id);
-		if (mercadoriaOpt.isPresent()) {
-			repositorio.delete(mercadoriaOpt.get());
-			return new ResponseEntity<>("Mercadoria deletada com sucesso.", HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>("Mercadoria não encontrada.", HttpStatus.NOT_FOUND);
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_GERENTE', 'ROLE_VENDEDOR')")
+	@GetMapping("/buscar/{id}")
+	public ResponseEntity<Mercadoria> buscar(@PathVariable Long id){
+		Mercadoria mercadoria = listagem.buscarMercadoria(id);
+		if(mercadoria != null) {
+			return new ResponseEntity<Mercadoria>(mercadoria ,HttpStatus.FOUND);
+		}
+		else {
+			return new ResponseEntity<Mercadoria>(HttpStatus.FOUND);
 		}
 	}
 	
-	@PostMapping("/adicionarMercadoriaUsuario/{usuarioId}/{mercadoriaId}")
-	public ResponseEntity<?> adicionarMercadoriaAoUsuario(@PathVariable long usuarioId, @PathVariable long mercadoriaId) {
-	    Optional<Usuario> usuarioOpt = repositorioUsuario.findById(usuarioId);
-	    if (!usuarioOpt.isPresent()) {
-	        return new ResponseEntity<>("Usuário não encontrado.", HttpStatus.NOT_FOUND);
-	    }
-	    Optional<Mercadoria> mercadoriaOpt = repositorio.findById(mercadoriaId);
-	    if (!mercadoriaOpt.isPresent()) {
-	        return new ResponseEntity<>("Mercadoria não encontrada.", HttpStatus.NOT_FOUND);
-	    }
-	    Usuario usuario = usuarioOpt.get();
-	    Mercadoria mercadoria = mercadoriaOpt.get();
-	    if (usuario.getMercadorias().contains(mercadoria)) {
-	        return new ResponseEntity<>("A mercadoria já está associada ao usuário.", HttpStatus.CONFLICT);
-	    }
-	    usuario.getMercadorias().add(mercadoria);
-	    repositorioUsuario.save(usuario);
-	    new AdicionadorLinkMercadoria().adicionarLink(mercadoria);
-	    return new ResponseEntity<>("Mercadoria adicionada ao usuário com sucesso.", HttpStatus.OK);
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_GERENTE')")
+	@DeleteMapping("/deletar/{id}")
+	public ResponseEntity<?> deletar(@PathVariable Long id){
+		Mercadoria mercadoria = listagem.buscarMercadoria(id);
+		if(mercadoria != null) {
+			removedor.deletar(mercadoria);
+			return new ResponseEntity<>(HttpStatus.OK);
+		}
+		else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
 	}
-
 	
-	@GetMapping("/listarMercadoriasUsuario/{usuarioId}")
-	public ResponseEntity<?> listarMercadoriasUsuario(@PathVariable long usuarioId) {
-	    Optional<Usuario> usuarioOpt = repositorioUsuario.findById(usuarioId);
-	    if (!usuarioOpt.isPresent()) {
-	        return new ResponseEntity<>("Usuário não encontrado.", HttpStatus.NOT_FOUND);
-	    }
-	    Usuario usuario = usuarioOpt.get();
-	    List<Mercadoria> mercadorias = usuario.getMercadorias();
-	    if (mercadorias.isEmpty()) {
-	        return new ResponseEntity<>("Nenhuma mercadoria encontrada para este usuário.", HttpStatus.NOT_FOUND);
-	    }
-	    new AdicionadorLinkMercadoria().adicionarLink(mercadorias);
-	    return new ResponseEntity<>(mercadorias, HttpStatus.FOUND);
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_GERENTE')")
+	@PutMapping("/atualizar")
+	public ResponseEntity<?> atualizar(@RequestBody Mercadoria data){
+		Mercadoria mercadoria = listagem.buscarMercadoria(data.getId());
+		if(mercadoria != null) {
+			atualizador.atualizar(mercadoria, data);
+			return new ResponseEntity<>(HttpStatus.ACCEPTED);
+		}
+		else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
 	}
-
-}
+	
+	}

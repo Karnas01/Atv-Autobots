@@ -1,5 +1,7 @@
 package com.autobots.automanager.entidades;
 
+import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -10,22 +12,22 @@ import lombok.Data;
 
 @Data
 @Entity
-public class Endereco {
+public class Mercadoria {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	@Column(nullable = false)
-	private String estado;
+	private Date validade;
 	@Column(nullable = false)
-	private String cidade;
+	private Date fabricao;
 	@Column(nullable = false)
-	private String bairro;
+	private Date cadastro;
 	@Column(nullable = false)
-	private String rua;
+	private String nome;
 	@Column(nullable = false)
-	private String numero;
+	private long quantidade;
 	@Column(nullable = false)
-	private String codigoPostal;
-	@Column()
-	private String informacoesAdicionais;
+	private double valor;
+	@Column
+	private String descricao;
 }
